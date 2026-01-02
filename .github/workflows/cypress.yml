@@ -1,18 +1,28 @@
-name: Run Cypress Tests
+name: Cypress Tests
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      starter_name:
+        description: "Name der Person, die den Testlauf startet"
+        required: true
+        type: string
 
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Starter anzeigen
+        run: echo "Tests gestartet von: ${{ github.event.inputs.starter_name }}"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -25,6 +35,30 @@ jobs:
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
-          build: npm run build
-          start: npm start
-          wait-on: http://localhost:3000
+          browser: chrome
+          record: false
+
+      - name: Save Cypress artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-artifacts
+          path: |
+            cypress/screenshots
+            cypress/videos
+            cypress/results
+
+      - name: Copy test results into repo folder
+        run: |
+          mkdir -p test-results
+          echo "Starter: ${{ github.event.inputs.starter_name }}" > test-results/info.txt
+          cp -r cypress/screenshots test-results/ || true
+          cp -r cypress/videos test-results/ || true
+          cp -r cypress/results test-results/ || true
+
+      - name: Commit test results back to repo
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add test-results
+          git commit -m "Update Cypress test results (Starter: ${{ github.event.inputs.starter_name }}) [skip ci]" || echo "No changes to commit"
+          git push
