@@ -1,0 +1,31 @@
+name: Cypress_Manual_Run_AG
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-cypress:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Cypress tests and save console output
+        run: |
+          mkdir -p cypress/results
+          npx cypress run --spec "cypress/e2e/**/*.cy.js" | tee cypress/results/test-output.txt
+
+      - name: Upload results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-results
+          path: cypress/results
