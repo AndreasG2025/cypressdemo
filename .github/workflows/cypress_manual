@@ -1,4 +1,4 @@
-name: Cypress Tests (manual)
+name: Cypress Tests AG (manual)
 
 on:
   workflow_dispatch:
