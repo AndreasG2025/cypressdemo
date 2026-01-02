@@ -1,0 +1,46 @@
+name: Cypress Tests (manual)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cypress-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # wichtig, damit wir später committen können
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v6
+        with:
+          build: npm run build
+          start: npm start
+          wait-on: http://localhost:3000
+          browser: chrome
+        env:
+          CI: true
+
+      - name: Commit test results
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          # Stelle sicher, dass Cypress-Output existiert
+          if [ -d "cypress/videos" ] || [ -d "cypress/screenshots" ] || [ -d "cypress/results" ]; then
+            git add cypress/videos || true
+            git add cypress/screenshots || true
+            git add cypress/results || true
+            git commit -m "Update Cypress test results [skip ci]" || echo "Nothing to commit"
+            git push
+          fi
