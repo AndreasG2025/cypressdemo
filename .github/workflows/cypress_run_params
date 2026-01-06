@@ -1,0 +1,80 @@
+name: Cypress Tests Param
+
+on:
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: "Welcher Browser soll genutzt werden?"
+        required: true
+        default: "chrome"
+        type: choice
+        options:
+          - chrome
+          - firefox
+          - electron
+
+      spec:
+        description: "Optional: Nur bestimmte Specs ausführen (z.B. cypress/e2e/login.cy.js)"
+        required: false
+        default: ""
+
+      env:
+        description: "Optional: Environment (z.B. staging, production)"
+        required: false
+        default: ""
+
+      headless:
+        description: "Headless Mode?"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+jobs:
+  cypress-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Cypress tests
+        run: |
+          echo "Starte Cypress mit folgenden Parametern:"
+          echo "Browser: ${{ github.event.inputs.browser }}"
+          echo "Spec: ${{ github.event.inputs.spec }}"
+          echo "Environment: ${{ github.event.inputs.env }}"
+          echo "Headless: ${{ github.event.inputs.headless }}"
+
+          CMD="npx cypress run --browser ${{ github.event.inputs.browser }} --reporter spec"
+
+          if [ "${{ github.event.inputs.headless }}" = "false" ]; then
+            CMD="$CMD --headed"
+          fi
+
+          if [ "${{ github.event.inputs.spec }}" != "" ]; then
+            CMD="$CMD --spec '${{ github.event.inputs.spec }}'"
+          fi
+
+          if [ "${{ github.event.inputs.env }}" != "" ]; then
+            CMD="$CMD --env environment=${{ github.event.inputs.env }}"
+          fi
+
+          # Ausführen und Ausgabe speichern
+          eval "$CMD" | tee cypress-test-output.txt
+
+      - name: Upload test results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-test-output
+          path: cypress-test-output.txt
